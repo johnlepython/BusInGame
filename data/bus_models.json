@@ -1,0 +1,7 @@
+[
+  {"name": "Standard 12 m diesel",      "energy": "diesel",     "body": "standard", "capacity": 90,  "consumption_per_100km": 38.0,  "price": 95000,  "reliability": 0.985, "maintenance_cost_per_km": 0.30},
+  {"name": "Standard 12 m GNV",         "energy": "gnv",        "body": "standard", "capacity": 90,  "consumption_per_100km": 36.0,  "price": 120000, "reliability": 0.983, "maintenance_cost_per_km": 0.28},
+  {"name": "Standard 12 m électrique",  "energy": "electrique", "body": "standard", "capacity": 85,  "consumption_per_100km": 110.0, "price": 210000, "reliability": 0.990, "maintenance_cost_per_km": 0.18},
+  {"name": "Articulé 18 m diesel",      "energy": "diesel",     "body": "articule", "capacity": 150, "consumption_per_100km": 50.0,  "price": 170000, "reliability": 0.980, "maintenance_cost_per_km": 0.42},
+  {"name": "Articulé 18 m électrique",  "energy": "electrique", "body": "articule", "capacity": 140, "consumption_per_100km": 150.0, "price": 340000, "reliability": 0.988, "maintenance_cost_per_km": 0.26}
+]

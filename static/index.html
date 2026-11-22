@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bus Manager</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>🚌 <span id="company-name">Bus Manager</span></h1>
+  <div class="topstats">
+    <span id="top-date"></span>
+    <span id="top-cash" class="big"></span>
+  </div>
+</header>
+<nav id="tabs">
+  <button data-tab="dashboard" class="active">Tableau de bord</button>
+  <button data-tab="fleet">Parc</button>
+  <button data-tab="drivers">Conducteurs</button>
+  <button data-tab="lines">Lignes et services</button>
+  <button data-tab="report">Bilan</button>
+</nav>
+<main>
+  <section id="tab-dashboard" class="tab"></section>
+  <section id="tab-fleet" class="tab" hidden></section>
+  <section id="tab-drivers" class="tab" hidden></section>
+  <section id="tab-lines" class="tab" hidden></section>
+  <section id="tab-report" class="tab" hidden></section>
+</main>
+<div id="toast" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

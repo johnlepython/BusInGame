@@ -4,3 +4,5 @@ __pycache__/
 *.db-journal
 .venv/
 .DS_Store
+*.db-*
+.pytest_cache/

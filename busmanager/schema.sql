@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS company (
     game_day    INTEGER NOT NULL DEFAULT 0,   -- prochain jour à simuler
     reputation  REAL    NOT NULL DEFAULT 50,  -- 0..100
     level       INTEGER NOT NULL DEFAULT 1,
-    seed        INTEGER NOT NULL DEFAULT 1    -- graine du hasard (pannes), pour la reproductibilité
+    seed        INTEGER NOT NULL DEFAULT 1,   -- graine du hasard (pannes), pour la reproductibilité
+    start_date  TEXT                          -- date réelle (ISO) du jour de jeu 0, pour le tick calé sur le calendrier
 );
 
 -- Catalogue de modèles (données de référence, partagées par toutes les compagnies)
@@ -82,6 +83,7 @@ CREATE TABLE IF NOT EXISTS service (
     line_id     INTEGER NOT NULL REFERENCES line(id),
     start_hour  INTEGER NOT NULL,
     end_hour    INTEGER NOT NULL,     -- exclu
+    day_type    TEXT    NOT NULL DEFAULT 'all' CHECK (day_type IN ('all', 'weekday', 'weekend')),
     vehicle_id  INTEGER REFERENCES vehicle(id),
     driver_id   INTEGER REFERENCES driver(id),
     CHECK (start_hour >= 0 AND end_hour <= 24 AND end_hour > start_hour)

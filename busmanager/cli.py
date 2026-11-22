@@ -3,11 +3,13 @@
   python -m busmanager new                  # crée game.db avec une nouvelle partie
   python -m busmanager status               # état de la compagnie
   python -m busmanager tick --days 7        # avance de 7 jours
+  python -m busmanager tick --to-today      # rattrape tous les jours jusqu'à aujourd'hui inclus (pour le cron)
   python -m busmanager simulate --days 200  # simulation d'équilibrage (en mémoire)
 """
 import argparse
+from datetime import date
 
-from . import engine, seed, sim
+from . import balance, engine, seed, sim
 from .db import connect, init_db
 
 
@@ -22,6 +24,7 @@ def cmd_new(args):
     conn = connect(args.db)
     init_db(conn)
     cid = seed.new_game(conn, name=args.name, seed=args.seed)
+    conn.close()
     print(f"Partie créée dans {args.db} (compagnie {cid}).")
 
 
@@ -50,14 +53,32 @@ def cmd_status(args):
     for e in conn.execute(
         "SELECT * FROM event_log WHERE company_id = ? ORDER BY id DESC LIMIT 5", (cid,)):
         print(f"  j{e['day']}: {e['message']}")
+    conn.close()
 
 
 def cmd_tick(args):
     conn = connect(args.db)
     cid = _company_id(conn)
-    start = conn.execute("SELECT game_day FROM company WHERE id = ?", (cid,)).fetchone()["game_day"]
-    for r in engine.catch_up(conn, cid, start + args.days):
+    if args.to_today:
+        target = engine.target_day_for_date(conn, cid, date.today())
+    else:
+        start = conn.execute("SELECT game_day FROM company WHERE id = ?", (cid,)).fetchone()["game_day"]
+        target = start + args.days
+    results = engine.catch_up(conn, cid, target)
+    for r in results:
         print(f"j{r['day']}: {r['profit']:+,.0f} € (trésorerie {r['cash_after']:,.0f} €)")
+    if not results:
+        print("Déjà à jour : aucun jour à calculer.")
+    conn.close()
+
+
+def cmd_balance(args):
+    from .db import connect as _c
+    conn = _c(":memory:")
+    init_db(conn)
+    cid = seed.new_game(conn, data_dir=args.data)
+    print(balance.report(conn, cid))
+    conn.close()
 
 
 def cmd_simulate(args):
@@ -74,7 +95,10 @@ def main(argv=None):
     s = sub.add_parser("new"); s.add_argument("--name", default="Ma Compagnie"); s.add_argument("--seed", type=int, default=1)
     s.set_defaults(func=cmd_new)
     s = sub.add_parser("status"); s.set_defaults(func=cmd_status)
-    s = sub.add_parser("tick"); s.add_argument("--days", type=int, default=1); s.set_defaults(func=cmd_tick)
+    s = sub.add_parser("tick"); s.add_argument("--days", type=int, default=1)
+    s.add_argument("--to-today", action="store_true", help="rattrape les jours manquants jusqu'à la date du jour (cron)")
+    s.set_defaults(func=cmd_tick)
+    s = sub.add_parser("balance"); s.add_argument("--data", default=str(seed.DATA_DIR)); s.set_defaults(func=cmd_balance)
     s = sub.add_parser("simulate"); s.add_argument("--days", type=int, default=200); s.add_argument("--seed", type=int, default=1)
     s.set_defaults(func=cmd_simulate)
 

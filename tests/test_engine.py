@@ -1,5 +1,7 @@
 import unittest
 
+from datetime import date
+
 from busmanager import actions, engine, rules, seed, sim
 from busmanager.db import connect, init_db
 
@@ -8,7 +10,7 @@ def fresh_game(test, seed_value=1):
     conn = connect(":memory:")
     test.addCleanup(conn.close)
     init_db(conn)
-    cid = seed.new_game(conn, seed=seed_value)
+    cid = seed.new_game(conn, seed=seed_value, start_date=date(2026, 11, 2))  # un lundi
     return conn, cid
 
 
@@ -102,6 +104,7 @@ class ActionTests(unittest.TestCase):
         conn, cid = fresh_game(self)
         depot_id = conn.execute("SELECT id FROM depot").fetchone()["id"]
         art = conn.execute("SELECT id FROM bus_model WHERE body = 'articule' AND energy = 'diesel'").fetchone()["id"]
+        conn.execute("UPDATE company SET cash = 5000000")
         vid = actions.buy_vehicle(conn, cid, art, depot_id)
         l2 = conn.execute("SELECT id FROM line WHERE code = 'L2'").fetchone()["id"]
         sid = actions.create_service(conn, l2, 6, 10)
@@ -112,6 +115,7 @@ class ActionTests(unittest.TestCase):
         conn, cid = fresh_game(self)
         depot_id = conn.execute("SELECT id FROM depot").fetchone()["id"]
         art = conn.execute("SELECT id FROM bus_model WHERE body = 'articule' AND energy = 'diesel'").fetchone()["id"]
+        conn.execute("UPDATE company SET cash = 5000000")
         vid = actions.buy_vehicle(conn, cid, art, depot_id)
         l1 = conn.execute("SELECT id FROM line WHERE code = 'L1'").fetchone()["id"]
         sid = actions.create_service(conn, l1, 6, 10)

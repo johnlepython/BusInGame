@@ -11,6 +11,7 @@ Simplifications du niveau 1 :
 import random
 import sqlite3
 from collections import defaultdict
+from datetime import date
 
 from . import rules
 from .actions import log_event, post
@@ -29,7 +30,8 @@ def run_day(conn: sqlite3.Connection, company_id: int) -> dict:
         raise AlreadyTicked(f"Jour {day} déjà calculé pour la compagnie {company_id}")
 
     cash_before = company["cash"]
-    dtype = rules.day_type(day)
+    start = date.fromisoformat(company["start_date"]) if company["start_date"] else None
+    dtype = rules.day_type(day, start)
     mult = rules.demand_multiplier(company["reputation"])
     rng = random.Random(f"{company['seed']}:{company_id}:{day}")
 
@@ -69,7 +71,9 @@ def run_day(conn: sqlite3.Connection, company_id: int) -> dict:
                     (line["id"], dtype),
                 )
             }
-            services = conn.execute("SELECT * FROM service WHERE line_id = ?", (line["id"],)).fetchall()
+            services = conn.execute(
+                "SELECT * FROM service WHERE line_id = ? AND day_type IN ('all', ?)", (line["id"], dtype)
+            ).fetchall()
             operated = []
             for s in services:
                 v = vehicles.get(s["vehicle_id"])
@@ -193,6 +197,17 @@ def run_day(conn: sqlite3.Connection, company_id: int) -> dict:
         "demand": total_demand,
         "served": total_served,
     }
+
+
+def target_day_for_date(conn: sqlite3.Connection, company_id: int, today) -> int:
+    """Numéro de jour de jeu « à rattraper » pour une date réelle : tous les jours < cible sont calculés.
+
+    Le jour 0 correspond à company.start_date ; un cron lancé le soir du jour J calcule le jour J inclus.
+    """
+    start = conn.execute("SELECT start_date FROM company WHERE id = ?", (company_id,)).fetchone()["start_date"]
+    if start is None:
+        raise ValueError("Cette compagnie n'a pas de start_date")
+    return (today - date.fromisoformat(start)).days + 1
 
 
 def catch_up(conn: sqlite3.Connection, company_id: int, target_day: int) -> list[dict]:

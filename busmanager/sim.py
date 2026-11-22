@@ -5,10 +5,12 @@ trésorerie le permet, achète un bus pour la ligne qui laisse le plus de passag
 """
 import sqlite3
 
+from datetime import date
+
 from . import actions, engine, rules, seed
 from .db import connect, init_db
 
-CASH_RESERVE = 60_000.0  # trésorerie à garder avant d'investir
+CASH_RESERVE = 40_000.0  # trésorerie à garder après un achat
 
 
 def _worst_served_line(conn, company_id, day):
@@ -49,13 +51,19 @@ def greedy_strategy(conn, company_id):
         try:
             if v["ct_due_day"] - day <= 7:
                 actions.pass_ct(conn, v["id"])
-            elif v["revision_due_day"] - day <= 3 and v["status"] == "active":
+            if v["status"] != "active":
+                continue
+            if v["engine_state"] < 35:
+                actions.overhaul_engine(conn, v["id"])
+            elif v["interior_state"] < 25:
+                actions.refurbish_interior(conn, v["id"])
+            elif v["revision_due_day"] - day <= 3:
                 actions.maintain_vehicle(conn, v["id"])
         except actions.GameError:
             pass
 
     # Investissement
-    if cash > CASH_RESERVE + 150_000 and day > 0:
+    if cash > CASH_RESERVE + 95_000 and day > 0:
         line_id = _worst_served_line(conn, company_id, day)
         if line_id is not None:
             try:
@@ -67,7 +75,7 @@ def greedy_strategy(conn, company_id):
 def simulate(days: int = 200, seed_value: int = 1, strategy=greedy_strategy, verbose: bool = True) -> dict:
     conn = connect(":memory:")
     init_db(conn)
-    company_id = seed.new_game(conn, seed=seed_value)
+    company_id = seed.new_game(conn, seed=seed_value, start_date=date(2026, 1, 5))  # un lundi
     for _ in range(days):
         if strategy:
             strategy(conn, company_id)

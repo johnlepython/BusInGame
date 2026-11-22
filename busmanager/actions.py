@@ -73,21 +73,45 @@ def hire_driver(conn, company_id: int, name: str, articulated_licence: bool = Fa
     return cur.lastrowid
 
 
-def create_service(conn, line_id: int, start_hour: int, end_hour: int) -> int:
+def create_service(conn, line_id: int, start_hour: int, end_hour: int, day_type: str = "all") -> int:
+    if day_type not in ("all", "weekday", "weekend"):
+        raise GameError("Type de jour invalide (all, weekday, weekend)")
+    if conn.execute("SELECT 1 FROM line WHERE id = ?", (line_id,)).fetchone() is None:
+        raise GameError("Ligne introuvable")
     if not (0 <= start_hour < end_hour <= 24):
         raise GameError("Plage horaire invalide")
     if end_hour - start_hour > rules.MAX_SERVICE_HOURS:
         raise GameError(f"Un service ne peut pas dépasser {rules.MAX_SERVICE_HOURS} h")
     with conn:
         cur = conn.execute(
-            "INSERT INTO service (line_id, start_hour, end_hour) VALUES (?, ?, ?)",
-            (line_id, start_hour, end_hour),
+            "INSERT INTO service (line_id, start_hour, end_hour, day_type) VALUES (?, ?, ?, ?)",
+            (line_id, start_hour, end_hour, day_type),
         )
     return cur.lastrowid
 
 
-def _overlaps(a_start, a_end, b_start, b_end):
-    return a_start < b_end and b_start < a_end
+def _days_intersect(a: str, b: str) -> bool:
+    return a == "all" or b == "all" or a == b
+
+
+def _clashes(s, others) -> bool:
+    """Vrai si le service s chevauche l'un des autres services un même type de jour."""
+    return any(
+        _days_intersect(s["day_type"], o["day_type"])
+        and s["start_hour"] < o["end_hour"] and o["start_hour"] < s["end_hour"]
+        for o in others
+    )
+
+
+def _max_daily_hours(s, others) -> int:
+    """Heures de conduite max sur un jour de semaine ou de week-end, en comptant s."""
+    worst = 0
+    for dtype in ("weekday", "weekend"):
+        total = sum(o["end_hour"] - o["start_hour"] for o in others if o["day_type"] in ("all", dtype))
+        if s["day_type"] in ("all", dtype):
+            total += s["end_hour"] - s["start_hour"]
+        worst = max(worst, total)
+    return worst
 
 
 def assign_service(conn, service_id: int, vehicle_id: int | None = None, driver_id: int | None = None) -> None:
@@ -108,10 +132,10 @@ def assign_service(conn, service_id: int, vehicle_id: int | None = None, driver_
         if s["allowed_body"] == "standard" and body == "articule":
             raise GameError("Bus articulé interdit sur cette ligne")
         others = conn.execute(
-            "SELECT start_hour, end_hour FROM service WHERE vehicle_id = ? AND id != ?",
+            "SELECT start_hour, end_hour, day_type FROM service WHERE vehicle_id = ? AND id != ?",
             (vehicle_id, service_id),
         ).fetchall()
-        if any(_overlaps(s["start_hour"], s["end_hour"], o["start_hour"], o["end_hour"]) for o in others):
+        if _clashes(s, others):
             raise GameError("Ce bus a déjà un service sur cette plage horaire")
 
     if driver_id is not None:
@@ -127,13 +151,12 @@ def assign_service(conn, service_id: int, vehicle_id: int | None = None, driver_
             if body == "articule" and not d["articulated_licence"]:
                 raise GameError("Ce conducteur n'a pas le permis articulé")
         others = conn.execute(
-            "SELECT start_hour, end_hour FROM service WHERE driver_id = ? AND id != ?",
+            "SELECT start_hour, end_hour, day_type FROM service WHERE driver_id = ? AND id != ?",
             (driver_id, service_id),
         ).fetchall()
-        if any(_overlaps(s["start_hour"], s["end_hour"], o["start_hour"], o["end_hour"]) for o in others):
+        if _clashes(s, others):
             raise GameError("Ce conducteur a déjà un service sur cette plage horaire")
-        total = sum(o["end_hour"] - o["start_hour"] for o in others) + (s["end_hour"] - s["start_hour"])
-        if total > rules.DRIVER_MAX_HOURS:
+        if _max_daily_hours(s, others) > rules.DRIVER_MAX_HOURS:
             raise GameError(f"Plus de {rules.DRIVER_MAX_HOURS} h de conduite par jour")
 
     with conn:
@@ -143,13 +166,38 @@ def assign_service(conn, service_id: int, vehicle_id: int | None = None, driver_
             conn.execute("UPDATE service SET driver_id = ? WHERE id = ?", (driver_id, service_id))
 
 
-def maintain_vehicle(conn, vehicle_id: int) -> None:
-    """Révision : coût, +état moteur, repousse l'échéance, 1 jour à l'atelier."""
+def unassign_service(conn, service_id: int, vehicle: bool = False, driver: bool = False) -> None:
+    if conn.execute("SELECT 1 FROM service WHERE id = ?", (service_id,)).fetchone() is None:
+        raise GameError("Service introuvable")
+    with conn:
+        if vehicle:
+            conn.execute("UPDATE service SET vehicle_id = NULL WHERE id = ?", (service_id,))
+        if driver:
+            conn.execute("UPDATE service SET driver_id = NULL WHERE id = ?", (service_id,))
+
+
+def delete_service(conn, service_id: int) -> None:
+    with conn:
+        n = conn.execute("DELETE FROM service WHERE id = ?", (service_id,)).rowcount
+    if n == 0:
+        raise GameError("Service introuvable")
+
+
+def _workshop_ready(conn, vehicle_id: int, cost: float):
+    """Vérifie qu'un bus peut entrer à l'atelier (pas déjà immobilisé) et que la trésorerie suffit."""
     v = _vehicle(conn, vehicle_id)
+    if v["status"] == "workshop":
+        raise GameError(f"{v['plate']} est déjà à l'atelier")
     day = current_day(conn, v["company_id"])
     cash = conn.execute("SELECT cash FROM company WHERE id = ?", (v["company_id"],)).fetchone()["cash"]
-    if cash < rules.REVISION_COST:
+    if cash < cost:
         raise GameError("Trésorerie insuffisante")
+    return v, day
+
+
+def maintain_vehicle(conn, vehicle_id: int) -> None:
+    """Révision : coût, +état moteur, repousse l'échéance, 1 jour à l'atelier."""
+    v, day = _workshop_ready(conn, vehicle_id, rules.REVISION_COST)
     with conn:
         conn.execute(
             """UPDATE vehicle SET engine_state = MIN(100, engine_state + ?), revision_due_day = ?,
@@ -157,6 +205,31 @@ def maintain_vehicle(conn, vehicle_id: int) -> None:
             (rules.REVISION_ENGINE_BONUS, day + rules.REVISION_INTERVAL_DAYS, day + 1, vehicle_id),
         )
         post(conn, v["company_id"], day, "revision", -rules.REVISION_COST, f"Révision {v['plate']}", vehicle_id)
+
+
+def overhaul_engine(conn, vehicle_id: int) -> None:
+    """Révision générale : état moteur remis à 100, quelques jours à l'atelier."""
+    v, day = _workshop_ready(conn, vehicle_id, rules.OVERHAUL_COST)
+    with conn:
+        conn.execute(
+            """UPDATE vehicle SET engine_state = 100, revision_due_day = ?,
+                      status = 'workshop', available_from_day = ? WHERE id = ?""",
+            (day + rules.REVISION_INTERVAL_DAYS, day + 1 + rules.OVERHAUL_DOWNTIME_DAYS, vehicle_id),
+        )
+        post(conn, v["company_id"], day, "overhaul", -rules.OVERHAUL_COST,
+             f"Révision générale {v['plate']}", vehicle_id)
+
+
+def refurbish_interior(conn, vehicle_id: int) -> None:
+    """Remise à neuf de l'intérieur : état intérieur remis à 100."""
+    v, day = _workshop_ready(conn, vehicle_id, rules.REFURBISH_COST)
+    with conn:
+        conn.execute(
+            "UPDATE vehicle SET interior_state = 100, status = 'workshop', available_from_day = ? WHERE id = ?",
+            (day + 1 + rules.REFURBISH_DOWNTIME_DAYS, vehicle_id),
+        )
+        post(conn, v["company_id"], day, "refurbish", -rules.REFURBISH_COST,
+             f"Remise à neuf intérieur {v['plate']}", vehicle_id)
 
 
 def pass_ct(conn, vehicle_id: int) -> None:

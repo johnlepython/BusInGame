@@ -1,0 +1,18 @@
+[
+  {
+    "code": "L1", "name": "Centre-ville ↔ Université",
+    "distance_km": 6.0, "duration_min": 25, "allowed_body": "any", "fare": 0.7,
+    "weekday_passengers": 3200, "weekend_factor": 0.55
+  },
+  {
+    "code": "L2", "name": "Centre-ville ↔ Zone nord",
+    "distance_km": 14.0, "duration_min": 35, "allowed_body": "standard", "fare": 1.05,
+    "weekday_passengers": 1800, "weekend_factor": 0.40
+  },
+  {
+    "code": "L3", "name": "Gare ↔ Zone industrielle",
+    "distance_km": 9.0, "duration_min": 20, "allowed_body": "any", "fare": 0.95,
+    "weekday_passengers": 1500, "weekend_factor": 0.30,
+    "profile_weekday": "commuter"
+  }
+]

@@ -1,0 +1,4 @@
+# Moteur et CLI : aucune dépendance. L'API web et ses tests ont besoin de :
+fastapi>=0.110
+uvicorn>=0.29
+httpx>=0.27      # utilisé uniquement par les tests de l'API
