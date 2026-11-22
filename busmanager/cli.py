@@ -1,15 +1,16 @@
 """Interface en ligne de commande.
 
-  python -m busmanager new                  # crée game.db avec une nouvelle partie
+  python -m busmanager new                  # crée game.db avec une nouvelle partie (sans compte joueur)
+  python -m busmanager new --user bob --password motdepasse   # idem, rattachée à un compte joueur
   python -m busmanager status               # état de la compagnie
   python -m busmanager tick --days 7        # avance de 7 jours
-  python -m busmanager tick --to-today      # rattrape tous les jours jusqu'à aujourd'hui inclus (pour le cron)
+  python -m busmanager tick --to-today      # rattrape TOUTES les compagnies jusqu'à aujourd'hui inclus (pour le cron)
   python -m busmanager simulate --days 200  # simulation d'équilibrage (en mémoire)
 """
 import argparse
 from datetime import date
 
-from . import balance, engine, seed, sim
+from . import auth, balance, engine, seed, sim
 from .db import connect, init_db
 
 
@@ -23,7 +24,17 @@ def _company_id(conn):
 def cmd_new(args):
     conn = connect(args.db)
     init_db(conn)
-    cid = seed.new_game(conn, name=args.name, seed=args.seed)
+    account_id = None
+    if args.user:
+        if not args.password:
+            conn.close()
+            raise SystemExit("--user demande aussi --password")
+        try:
+            account_id = auth.create_account(conn, args.user, args.password)
+        except auth.AuthError as e:
+            conn.close()
+            raise SystemExit(str(e))
+    cid = seed.new_game(conn, name=args.name, seed=args.seed, account_id=account_id)
     conn.close()
     print(f"Partie créée dans {args.db} (compagnie {cid}).")
 
@@ -33,6 +44,16 @@ def cmd_status(args):
     cid = _company_id(conn)
     c = conn.execute("SELECT * FROM company WHERE id = ?", (cid,)).fetchone()
     print(f"{c['name']} — jour {c['game_day']} — trésorerie {c['cash']:,.0f} € — réputation {c['reputation']:.1f}")
+    print("\nDépôt :")
+    for i in conn.execute(
+        """SELECT i.energy, i.capacity, i.stock FROM energy_infra i JOIN depot d ON d.id = i.depot_id
+           WHERE d.company_id = ? ORDER BY i.energy""", (cid,)):
+        what = f"{i['capacity']:g} borne(s)" if i["energy"] == "electrique" else f"{i['stock']:,.0f} / {i['capacity']:,.0f}"
+        print(f"  {i['energy']:<11} {what}")
+    for o in conn.execute(
+        """SELECT o.name, s.quantity FROM option_stock s JOIN option o ON o.id = s.option_id
+           WHERE s.company_id = ?""", (cid,)):
+        print(f"  stock atelier : {o['quantity']} × {o['name']}")
     print("\nVéhicules :")
     for v in conn.execute(
         """SELECT v.*, m.name AS model FROM vehicle v JOIN bus_model m ON m.id = v.model_id
@@ -58,12 +79,16 @@ def cmd_status(args):
 
 def cmd_tick(args):
     conn = connect(args.db)
-    cid = _company_id(conn)
     if args.to_today:
-        target = engine.target_day_for_date(conn, cid, date.today())
-    else:
-        start = conn.execute("SELECT game_day FROM company WHERE id = ?", (cid,)).fetchone()["game_day"]
-        target = start + args.days
+        done = engine.catch_up_all(conn, date.today())
+        count = sum(len(r) for r in done.values())
+        print(f"{count} jour(s) calculé(s) pour {len(done)} compagnie(s)." if count else
+              "Déjà à jour : aucun jour à calculer.")
+        conn.close()
+        return
+    cid = _company_id(conn)
+    start = conn.execute("SELECT game_day FROM company WHERE id = ?", (cid,)).fetchone()["game_day"]
+    target = start + args.days
     results = engine.catch_up(conn, cid, target)
     for r in results:
         print(f"j{r['day']}: {r['profit']:+,.0f} € (trésorerie {r['cash_after']:,.0f} €)")
@@ -93,6 +118,7 @@ def main(argv=None):
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("new"); s.add_argument("--name", default="Ma Compagnie"); s.add_argument("--seed", type=int, default=1)
+    s.add_argument("--user"); s.add_argument("--password")
     s.set_defaults(func=cmd_new)
     s = sub.add_parser("status"); s.set_defaults(func=cmd_status)
     s = sub.add_parser("tick"); s.add_argument("--days", type=int, default=1)

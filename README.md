@@ -1,6 +1,9 @@
 # Bus Manager
 
-Jeu web de gestion d'un réseau de bus. Niveau 1 : moteur, API et interface de gestion jouable.
+Jeu web de gestion d'un réseau de bus, inspiré de Transport Manager. Les « niveaux » sont les niveaux du jeu :
+le **niveau 1** (implémenté) contient les comptes joueurs, un réseau de 4 lignes, un parc de bus (neufs et d'occasion),
+des conducteurs et des services, un dépôt avec citernes et bornes de recharge, et un atelier avec stock d'options
+(valideurs). Un script calcule les gains chaque jour.
 
 ## Démarrage rapide
 
@@ -9,103 +12,92 @@ pip install -r requirements.txt            # seulement pour l'API web (le moteur
 uvicorn busmanager.api:app --reload        # puis ouvrir http://127.0.0.1:8000
 ```
 
-Au premier lancement, la base `game.db` et une partie de départ sont créées automatiquement
-(pour repartir de zéro : supprimer `game.db`). Le bouton « Passer au jour suivant » du tableau de bord
-fait avancer le jeu en mode développement (`BUSMANAGER_DEV=0` le désactive).
+La base `game.db` est créée au premier lancement. **Si tu as une ancienne `game.db`, supprime-la** : le schéma a changé.
+Sur l'écran de connexion, « Créer un compte » crée un identifiant, un mot de passe et une compagnie de départ.
+Le bouton « Passer au jour suivant » du tableau de bord n'existe qu'en mode développement (`BUSMANAGER_DEV=0` le désactive).
+
+Variables d'environnement : `BUSMANAGER_DB` (fichier SQLite), `BUSMANAGER_DEV`, `BUSMANAGER_SECURE_COOKIES=1`
+(cookie de session « Secure », obligatoire derrière HTTPS).
 
 ## En ligne de commande
 
 ```bash
-python3 -m busmanager new                  # nouvelle partie dans game.db
-python3 -m busmanager status               # état de la compagnie, du parc, dernier bilan
-python3 -m busmanager tick --days 7        # avance de 7 jours
-python3 -m busmanager tick --to-today      # rattrape tous les jours jusqu'à aujourd'hui inclus
-python3 -m busmanager balance              # analyse théorique de chaque ligne (voir « Équilibrage »)
-python3 -m busmanager simulate --days 360  # simulation automatique, en mémoire
-python3 -m unittest discover -s tests      # tests (les tests API sont ignorés si fastapi n'est pas installé)
+python3 -m busmanager new                                   # partie sans compte joueur dans game.db
+python3 -m busmanager new --user bob --password motdepasse  # partie rattachée à un compte
+python3 -m busmanager status                                # compagnie, dépôt, parc, dernier bilan
+python3 -m busmanager tick --days 7                         # avance la 1re compagnie de 7 jours
+python3 -m busmanager tick --to-today                       # rattrape TOUTES les compagnies jusqu'à aujourd'hui inclus
+python3 -m busmanager balance                               # analyse théorique des lignes
+python3 -m busmanager simulate --days 360                   # simulation automatique en mémoire
+python3 -m unittest discover -s tests                       # tests (API ignorés si fastapi absent)
 ```
 
 ### Calcul quotidien automatique
 
-Le jour de jeu 0 correspond à la date de création de la partie : **un jour de jeu = un jour réel**, et le type de jour
-(semaine ou week-end : samedi et dimanche) suit le vrai calendrier. Pour le calcul quotidien, lancer chaque soir :
+Le jour de jeu 0 est la date de création de la compagnie : un jour de jeu = un jour réel, et le type de jour
+(semaine, samedi, dimanche) suit le vrai calendrier. Le cron lance chaque soir `tick --to-today`, qui rattrape tous
+les jours manquants ; il est sans danger s'il tourne en retard ou deux fois (un jour déjà calculé n'est jamais refait).
 
 ```cron
-55 23 * * *  cd /chemin/vers/bus-manager && python3 -m busmanager tick --to-today
+55 23 * * *  cd /chemin/bus-manager && python3 -m busmanager tick --to-today
 ```
 
-`--to-today` est idempotent : s'il est lancé en retard ou deux fois, il rattrape les jours manquants sans jamais
-recalculer un jour déjà fait.
+## Règles du niveau 1
 
-## Vos données : lignes et catalogue de bus
+- **Lignes** : durée, distance, tarif, carrosseries autorisées (standard / articulé / midi), **fréquence cible** en départs
+  par heure et par sens, et demande de voyageurs par heure, selon le type de jour (semaine, samedi, dimanche) et la
+  tranche (creuse, pointe, soir). Un bus assure `30 / durée` départs par heure et par sens : tenir une fréquence f demande
+  `f × durée / 30` bus.
+- **Services** : plage horaire sur une ligne, tenue par un bus et un conducteur (9 h de conduite maximum par jour), pour
+  tous les jours, la semaine, le samedi, le dimanche ou le week-end.
+- **Recettes** : voyageurs transportés (demande × effet de réputation, limitée par la capacité) × tarif.
+  Un bus sans valideur perd 10 % de ses recettes en fraude.
+- **Énergie** : diesel/hybride/GNV pris dans la citerne du dépôt ; si elle est vide ou absente, plein en station publique
+  (+30 % diesel/hybride, +40 % GNV). Les bus électriques ont une autonomie journalière (batterie rechargée la nuit) et
+  exigent une place de borne (3 bus par borne), sinon ils ne roulent pas.
+- **Atelier** : révision (1 j), révision générale du moteur, remise à neuf de l'intérieur, contrôle technique. Les valideurs
+  s'achètent pour le stock puis s'installent : le bus est immobilisé 1 jour. Un bus à l'atelier ne roule pas.
+- **Usure et pannes** : usure du moteur au km, de l'intérieur par passager ; probabilité de panne selon la fiabilité,
+  l'état du moteur et le retard de révision. Les pannes sont tirées avec un hasard reproductible (graine).
+- **Réputation** (0–100) : 40 % passagers transportés, 30 % fréquence tenue, 30 % état du parc ; elle module la demande.
+- **Comptabilité** : en caisse, chaque mouvement est écrit au `ledger` (invariant : trésorerie = somme du ledger).
 
-Tout se règle dans `data/` (aucun code à modifier). Une nouvelle partie recharge ces fichiers.
+## Données (dossier `data/`)
 
-**`data/bus_models.json`** : liste de modèles de bus
+Tout est modifiable sans toucher au code ; une erreur de format est signalée avec le nom de la ligne ou du modèle fautif.
 
-```json
-{"name": "Standard 12 m diesel", "energy": "diesel", "body": "standard", "capacity": 90,
- "consumption_per_100km": 38.0, "price": 95000, "reliability": 0.985, "maintenance_cost_per_km": 0.30}
-```
+- `bus_models.json` : liste de modèles `{brand, model, body, status ("neuf"|"occasion"), capacity, [initial], motors}`.
+  Chaque motorisation : `energy` (diesel, gnv, hybride, electrique), `consumption_per_100km` (L, kg ou kWh), `price`,
+  et `range_km` pour l'électrique. `initial` (occasions) : `km`, `engine_state`, `interior_state`, `ct_days`, `revision_days`.
+  Fiabilité et coût d'entretien ont des valeurs par défaut, surchargeables par motorisation.
+- `lines.json` : `code`, `name`, `terminus`, `duration_min`, `distance_km`, `allowed_bodies`, `fare`, `frequency` et
+  `demand_per_hour` (`weekday|saturday|sunday` × `creuse|pointe|soir`) ; ou `hourly` pour une demande heure par heure.
+- `options.json` : options achetables (`code`, `name`, `price`, `install_days`, `description`).
+- `game.json` : trésorerie de départ (une fois la flotte achetée), places du dépôt, citernes et stock de départ, stock
+  d'options, flotte de départ (`model`, `line`, `options`).
 
-`energy` : `diesel` (L), `gnv` (kg) ou `electrique` (kWh) pour la consommation. `body` : `standard` ou `articule`.
-`reliability` : entre 0 et 1, plus haut = moins de pannes.
-
-**`data/lines.json`** : liste de lignes
-
-```json
-{"code": "L1", "name": "Centre-ville ↔ Université", "distance_km": 6.0, "duration_min": 25,
- "allowed_body": "any", "fare": 0.7, "weekday_passengers": 3200, "weekend_factor": 0.55}
-```
-
-- `distance_km` et `duration_min` : pour **un trajet** (sens unique).
-- `allowed_body` : `any` ou `standard` (interdit les articulés).
-- `fare` : recette moyenne par passager (après tarifs réduits, abonnements, etc.).
-- Demande : soit `weekday_passengers` + `weekend_factor` (réparti selon un profil horaire : `profile_weekday` / `profile_weekend`,
-  au choix `commuter` ou `leisure`), soit une demande explicite par heure :
-  `"hourly": {"weekday": {"7": 600, "8": 700}, "weekend": {"11": 300}}`.
-
-Les erreurs de format sont signalées avec le nom du champ ou du modèle concerné.
+Les prix, fréquences, demandes et états des occasions fournis sont **inventés** pour équilibrer le jeu.
 
 ## Équilibrage
 
-`python3 -m busmanager balance` estime pour chaque ligne et chaque type de jour : le nombre de bus nécessaires, les recettes,
-les coûts et le **retour sur investissement**. Repère : entre 100 et 300 jours, le jeu est intéressant ; en dessous, c'est trop
-facile ; « jamais » signale une ligne ruineuse. Les constantes (salaires, usure, pannes, prix de l'énergie…) sont dans
-`busmanager/rules.py`. `simulate` joue une année avec une stratégie simple pour vérifier que l'économie ne s'effondre ni n'explose.
+`python3 -m busmanager balance` estime, ligne par ligne, les bus nécessaires pour tenir les fréquences, les recettes, les
+coûts et le temps de retour sur investissement. `simulate` joue une partie complète avec une stratégie simple
+(entretien à temps, valideurs, citerne remplie, achat de bus là où la fréquence manque). Cible : retour sur
+investissement de 150 à 300 jours, économie positive sur 360 jours.
 
-## Règles de jeu (niveau 1)
+## Comptes et sécurité
 
-- Un **service** = une plage horaire sur une ligne (tous les jours, semaine ou week-end), tenue par un bus et un conducteur.
-  Un conducteur a 9 h de conduite maximum par jour ; ni un bus ni un conducteur ne peuvent avoir deux services qui se chevauchent.
-- Un bus sans **contrôle technique** valide ne roule pas. Une **révision** en retard augmente le risque de panne.
-- **Ateliers** : révision (+25 d'état moteur, 1 jour), révision générale du moteur (état à 100, 4 jours), remise à neuf de l'intérieur (état à 100, 2 jours).
-  Un bus à l'atelier ne roule pas. Une panne l'immobilise 1 à 4 jours.
-- **Réputation** : dépend du taux de passagers transportés et de l'état du parc roulant ; elle module la demande (de ×0,7 à ×1,3).
-- Les salaires sont payés chaque jour à tous les conducteurs, qu'ils roulent ou non ; le dépôt coûte une somme fixe par place.
+Mots de passe hachés avec scrypt ; le jeton de session (cookie `httponly`, `SameSite=Lax`, 30 jours) n'est jamais stocké,
+seule son empreinte SHA-256 l'est. Chaque route vérifie que l'objet appartient à la compagnie du joueur connecté.
+L'authentification reste basique : pas de réinitialisation de mot de passe ni de limitation de tentatives. À durcir (HTTPS,
+limitation de débit) avant toute exposition publique.
 
-## Organisation du code
+## Structure
 
-| Fichier | Rôle |
-|---|---|
-| `busmanager/schema.sql` | Tables SQLite |
-| `busmanager/rules.py` | Constantes d'équilibrage et petites formules |
-| `busmanager/seed.py` | Chargement et validation des JSON, création d'une partie |
-| `busmanager/actions.py` | Actions du joueur avec validations (achat, embauche, services, affectations, ateliers) |
-| `busmanager/engine.py` | Tick quotidien (`run_day`), rattrapage (`catch_up`) |
-| `busmanager/balance.py` | Analyse théorique des lignes |
-| `busmanager/sim.py` | Stratégie gloutonne de simulation |
-| `busmanager/api.py` | API FastAPI + service de l'interface |
-| `busmanager/cli.py` | Commandes `new`, `status`, `tick`, `balance`, `simulate` |
-| `static/` | Interface (HTML, CSS, JavaScript sans build) |
-
-Principes : le tick est **idempotent** (`tick_log`) et **reproductible** (le hasard des pannes dérive de la graine, de la
-compagnie et du jour) ; `company.cash` est toujours égal à la somme du `ledger` (tout mouvement passe par `actions.post()`).
-
-## Limites actuelles
-
-- Une seule compagnie, pas de comptes joueurs ni d'authentification (l'API n'est pas faite pour être exposée telle quelle).
-- Le carburant est un coût au kilomètre : pas encore de citernes, de stocks ni de bornes de recharge.
-- Pas de stock d'options, de contrats publicitaires, de services spéciaux, de parcs relais ni de gare routière (niveau 2).
-- Les pannes sont tirées en fin de journée (le bus est indisponible dès le lendemain).
-- Les valeurs de `data/` sont des exemples ; l'économie a été réglée pour elles, pas pour vos lignes.
+```
+busmanager/   rules.py (constantes), schema.sql, seed.py (données), actions.py (actions du joueur),
+              engine.py (calcul quotidien), auth.py, api.py (FastAPI), cli.py, balance.py, sim.py
+static/       interface (HTML/JS/CSS sans étape de build)
+data/         catalogue, lignes, options, partie de départ
+tests/        unittest
+```

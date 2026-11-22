@@ -1,7 +1,127 @@
 [
-  {"name": "Standard 12 m diesel",      "energy": "diesel",     "body": "standard", "capacity": 90,  "consumption_per_100km": 38.0,  "price": 95000,  "reliability": 0.985, "maintenance_cost_per_km": 0.30},
-  {"name": "Standard 12 m GNV",         "energy": "gnv",        "body": "standard", "capacity": 90,  "consumption_per_100km": 36.0,  "price": 120000, "reliability": 0.983, "maintenance_cost_per_km": 0.28},
-  {"name": "Standard 12 m électrique",  "energy": "electrique", "body": "standard", "capacity": 85,  "consumption_per_100km": 110.0, "price": 210000, "reliability": 0.990, "maintenance_cost_per_km": 0.18},
-  {"name": "Articulé 18 m diesel",      "energy": "diesel",     "body": "articule", "capacity": 150, "consumption_per_100km": 50.0,  "price": 170000, "reliability": 0.980, "maintenance_cost_per_km": 0.42},
-  {"name": "Articulé 18 m électrique",  "energy": "electrique", "body": "articule", "capacity": 140, "consumption_per_100km": 150.0, "price": 340000, "reliability": 0.988, "maintenance_cost_per_km": 0.26}
+  {
+    "brand": "Iveco", "model": "Urbanway 12", "body": "standard", "status": "neuf", "capacity": 110,
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 35, "price": 165000},
+      {"energy": "gnv", "consumption_per_100km": 45, "price": 185000},
+      {"energy": "hybride", "consumption_per_100km": 30, "price": 200000}
+    ]
+  },
+  {
+    "brand": "Irisbus", "model": "Citelis 12", "body": "standard", "status": "occasion", "capacity": 108,
+    "initial": {"km": 420000, "engine_state": 55, "interior_state": 45, "ct_days": 150, "revision_days": 40},
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 40, "price": 72000},
+      {"energy": "gnv", "consumption_per_100km": 50, "price": 84000},
+      {"energy": "hybride", "consumption_per_100km": 33, "price": 92000}
+    ]
+  },
+  {
+    "brand": "Heuliez", "model": "GX337", "body": "standard", "status": "neuf", "capacity": 110,
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 35, "price": 160000},
+      {"energy": "gnv", "consumption_per_100km": 45, "price": 180000},
+      {"energy": "hybride", "consumption_per_100km": 30, "price": 195000}
+    ]
+  },
+  {
+    "brand": "Heuliez", "model": "GX327", "body": "standard", "status": "occasion", "capacity": 108,
+    "initial": {"km": 300000, "engine_state": 65, "interior_state": 55, "ct_days": 200, "revision_days": 55},
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 40, "price": 82000},
+      {"energy": "gnv", "consumption_per_100km": 50, "price": 94000},
+      {"energy": "hybride", "consumption_per_100km": 33, "price": 102000}
+    ]
+  },
+  {
+    "brand": "Heuliez", "model": "GX337 ELEC", "body": "standard", "status": "neuf", "capacity": 95,
+    "motors": [
+      {"energy": "electrique", "range_km": 200, "consumption_per_100km": 110, "price": 300000},
+      {"energy": "electrique", "range_km": 275, "consumption_per_100km": 110, "price": 335000},
+      {"energy": "electrique", "range_km": 350, "consumption_per_100km": 110, "price": 370000}
+    ]
+  },
+  {
+    "brand": "Iveco", "model": "Urbanway 18", "body": "articule", "status": "neuf", "capacity": 160,
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 40, "price": 270000},
+      {"energy": "gnv", "consumption_per_100km": 50, "price": 300000},
+      {"energy": "hybride", "consumption_per_100km": 35, "price": 320000}
+    ]
+  },
+  {
+    "brand": "Irisbus", "model": "Citelis 18", "body": "articule", "status": "occasion", "capacity": 155,
+    "initial": {"km": 480000, "engine_state": 50, "interior_state": 40, "ct_days": 120, "revision_days": 30},
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 44, "price": 118000},
+      {"energy": "gnv", "consumption_per_100km": 54, "price": 134000},
+      {"energy": "hybride", "consumption_per_100km": 37, "price": 146000}
+    ]
+  },
+  {
+    "brand": "Heuliez", "model": "GX437", "body": "articule", "status": "neuf", "capacity": 170,
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 40, "price": 285000},
+      {"energy": "gnv", "consumption_per_100km": 50, "price": 315000},
+      {"energy": "hybride", "consumption_per_100km": 35, "price": 335000}
+    ]
+  },
+  {
+    "brand": "Heuliez", "model": "GX427", "body": "articule", "status": "occasion", "capacity": 170,
+    "initial": {"km": 340000, "engine_state": 62, "interior_state": 52, "ct_days": 210, "revision_days": 60},
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 44, "price": 135000},
+      {"energy": "gnv", "consumption_per_100km": 54, "price": 152000},
+      {"energy": "hybride", "consumption_per_100km": 37, "price": 164000}
+    ]
+  },
+  {
+    "brand": "Heuliez", "model": "GX437 ELEC", "body": "articule", "status": "neuf", "capacity": 145,
+    "motors": [
+      {"energy": "electrique", "range_km": 200, "consumption_per_100km": 160, "price": 430000},
+      {"energy": "electrique", "range_km": 275, "consumption_per_100km": 160, "price": 480000},
+      {"energy": "electrique", "range_km": 350, "consumption_per_100km": 160, "price": 530000}
+    ]
+  },
+  {
+    "brand": "Iveco", "model": "Urbanway 10", "body": "midi", "status": "neuf", "capacity": 80,
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 30, "price": 135000},
+      {"energy": "gnv", "consumption_per_100km": 40, "price": 150000},
+      {"energy": "hybride", "consumption_per_100km": 25, "price": 163000}
+    ]
+  },
+  {
+    "brand": "Irisbus", "model": "Citelis 10", "body": "midi", "status": "occasion", "capacity": 75,
+    "initial": {"km": 390000, "engine_state": 55, "interior_state": 48, "ct_days": 140, "revision_days": 35},
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 33, "price": 60000},
+      {"energy": "gnv", "consumption_per_100km": 43, "price": 70000},
+      {"energy": "hybride", "consumption_per_100km": 27, "price": 77000}
+    ]
+  },
+  {
+    "brand": "Heuliez", "model": "GX137", "body": "midi", "status": "neuf", "capacity": 70,
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 30, "price": 125000},
+      {"energy": "gnv", "consumption_per_100km": 40, "price": 140000},
+      {"energy": "hybride", "consumption_per_100km": 25, "price": 153000}
+    ]
+  },
+  {
+    "brand": "Heuliez", "model": "GX127", "body": "midi", "status": "occasion", "capacity": 70,
+    "initial": {"km": 280000, "engine_state": 66, "interior_state": 56, "ct_days": 190, "revision_days": 50},
+    "motors": [
+      {"energy": "diesel", "consumption_per_100km": 33, "price": 58000},
+      {"energy": "hybride", "consumption_per_100km": 27, "price": 74000}
+    ]
+  },
+  {
+    "brand": "Heuliez", "model": "GX137 ELEC", "body": "midi", "status": "neuf", "capacity": 70,
+    "motors": [
+      {"energy": "electrique", "range_km": 150, "consumption_per_100km": 85, "price": 230000},
+      {"energy": "electrique", "range_km": 200, "consumption_per_100km": 85, "price": 255000},
+      {"energy": "electrique", "range_km": 250, "consumption_per_100km": 85, "price": 280000}
+    ]
+  }
 ]

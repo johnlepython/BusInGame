@@ -8,11 +8,33 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<div id="auth" hidden>
+  <div class="auth-box panel">
+    <h1>🚌 Bus Manager</h1>
+    <div id="auth-switch" class="row">
+      <button class="btn active" data-form="login">Connexion</button>
+      <button class="btn" data-form="register">Créer un compte</button>
+    </div>
+    <form id="login-form">
+      <label>Identifiant<input type="text" name="username" autocomplete="username" required maxlength="60"></label>
+      <label>Mot de passe<input type="password" name="password" autocomplete="current-password" required maxlength="200"></label>
+      <button class="btn primary" type="submit">Se connecter</button>
+    </form>
+    <form id="register-form" hidden>
+      <label>Identifiant (3 à 30 caractères : lettres, chiffres, _ . -)<input type="text" name="username" autocomplete="username" required maxlength="30"></label>
+      <label>Mot de passe (8 caractères minimum)<input type="password" name="password" autocomplete="new-password" required minlength="8" maxlength="200"></label>
+      <label>Nom de votre compagnie (facultatif)<input type="text" name="company_name" maxlength="60"></label>
+      <button class="btn primary" type="submit">Créer mon compte et ma compagnie</button>
+    </form>
+  </div>
+</div>
+<div id="app" hidden>
 <header>
   <h1>🚌 <span id="company-name">Bus Manager</span></h1>
   <div class="topstats">
     <span id="top-date"></span>
     <span id="top-cash" class="big"></span>
+    <span><span id="user-name"></span> · <button id="logout" class="linklike">Déconnexion</button></span>
   </div>
 </header>
 <nav id="tabs">
@@ -20,6 +42,8 @@
   <button data-tab="fleet">Parc</button>
   <button data-tab="drivers">Conducteurs</button>
   <button data-tab="lines">Lignes et services</button>
+  <button data-tab="depot">Dépôt</button>
+  <button data-tab="workshop">Atelier</button>
   <button data-tab="report">Bilan</button>
 </nav>
 <main>
@@ -27,8 +51,11 @@
   <section id="tab-fleet" class="tab" hidden></section>
   <section id="tab-drivers" class="tab" hidden></section>
   <section id="tab-lines" class="tab" hidden></section>
+  <section id="tab-depot" class="tab" hidden></section>
+  <section id="tab-workshop" class="tab" hidden></section>
   <section id="tab-report" class="tab" hidden></section>
 </main>
+</div>
 <div id="toast" hidden></div>
 <script src="/static/app.js"></script>
 </body>

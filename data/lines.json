@@ -1,18 +1,62 @@
 [
   {
-    "code": "L1", "name": "Centre-ville ↔ Université",
-    "distance_km": 6.0, "duration_min": 25, "allowed_body": "any", "fare": 0.7,
-    "weekday_passengers": 3200, "weekend_factor": 0.55
+    "code": "1", "name": "Gare Centrale ↔ Campus Universitaire",
+    "terminus": ["Gare Centrale", "Campus Universitaire"],
+    "duration_min": 45, "distance_km": 9, "allowed_bodies": ["standard", "articule"], "fare": 1.30,
+    "frequency": {
+      "weekday":  {"creuse": 2, "pointe": 4, "soir": 1},
+      "saturday": {"creuse": 1, "pointe": 2, "soir": 1},
+      "sunday":   {"creuse": 1, "pointe": 1, "soir": 0.5}
+    },
+    "demand_per_hour": {
+      "weekday":  {"creuse": 150, "pointe": 640, "soir": 60},
+      "saturday": {"creuse": 70,  "pointe": 180, "soir": 50},
+      "sunday":   {"creuse": 45,  "pointe": 70,  "soir": 30}
+    }
   },
   {
-    "code": "L2", "name": "Centre-ville ↔ Zone nord",
-    "distance_km": 14.0, "duration_min": 35, "allowed_body": "standard", "fare": 1.05,
-    "weekday_passengers": 1800, "weekend_factor": 0.40
+    "code": "2", "name": "Gare Centrale ↔ Port Fluvial",
+    "terminus": ["Gare Centrale", "Port Fluvial"],
+    "duration_min": 35, "distance_km": 7, "allowed_bodies": ["standard"], "fare": 1.10,
+    "frequency": {
+      "weekday":  {"creuse": 2, "pointe": 3, "soir": 1},
+      "saturday": {"creuse": 2, "pointe": 2, "soir": 1},
+      "sunday":   {"creuse": 1, "pointe": 2, "soir": 1}
+    },
+    "demand_per_hour": {
+      "weekday":  {"creuse": 140, "pointe": 380, "soir": 70},
+      "saturday": {"creuse": 150, "pointe": 260, "soir": 90},
+      "sunday":   {"creuse": 130, "pointe": 280, "soir": 110}
+    }
   },
   {
-    "code": "L3", "name": "Gare ↔ Zone industrielle",
-    "distance_km": 9.0, "duration_min": 20, "allowed_body": "any", "fare": 0.95,
-    "weekday_passengers": 1500, "weekend_factor": 0.30,
-    "profile_weekday": "commuter"
+    "code": "3", "name": "Gare Centrale ↔ Hôtel de Ville",
+    "terminus": ["Gare Centrale", "Hôtel de Ville"],
+    "duration_min": 30, "distance_km": 6, "allowed_bodies": ["midi", "standard"], "fare": 0.90,
+    "frequency": {
+      "weekday":  {"creuse": 3, "pointe": 4, "soir": 2},
+      "saturday": {"creuse": 3, "pointe": 4, "soir": 2},
+      "sunday":   {"creuse": 2, "pointe": 2, "soir": 1}
+    },
+    "demand_per_hour": {
+      "weekday":  {"creuse": 180, "pointe": 450, "soir": 130},
+      "saturday": {"creuse": 220, "pointe": 380, "soir": 160},
+      "sunday":   {"creuse": 120, "pointe": 160, "soir": 70}
+    }
+  },
+  {
+    "code": "4", "name": "Gare Centrale ↔ Hôpital Bonnegrâce",
+    "terminus": ["Gare Centrale", "Hôpital Bonnegrâce"],
+    "duration_min": 25, "distance_km": 5, "allowed_bodies": ["standard"], "fare": 0.90,
+    "frequency": {
+      "weekday":  {"creuse": 2, "pointe": 3, "soir": 2},
+      "saturday": {"creuse": 2, "pointe": 2, "soir": 2},
+      "sunday":   {"creuse": 2, "pointe": 2, "soir": 1}
+    },
+    "demand_per_hour": {
+      "weekday":  {"creuse": 150, "pointe": 330, "soir": 110},
+      "saturday": {"creuse": 140, "pointe": 190, "soir": 100},
+      "sunday":   {"creuse": 130, "pointe": 180, "soir": 80}
+    }
   }
 ]

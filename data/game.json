@@ -1,0 +1,14 @@
+{
+  "start_cash": 300000,
+  "depot_capacity": 24,
+  "start_tanks": {
+    "diesel": {"capacity": 12000, "stock": 6000}
+  },
+  "start_option_stock": {"valideur": 2},
+  "start_fleet": [
+    {"model": "Irisbus Citelis 12 — diesel", "line": "4", "options": ["valideur"]},
+    {"model": "Irisbus Citelis 12 — diesel", "line": "2"},
+    {"model": "Irisbus Citelis 10 — diesel", "line": "3"},
+    {"model": "Heuliez GX327 — diesel", "line": "1", "options": ["valideur"]}
+  ]
+}

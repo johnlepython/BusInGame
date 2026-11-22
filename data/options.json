@@ -1,0 +1,6 @@
+[
+  {
+    "code": "valideur", "name": "Valideur (composteur)", "price": 1400, "install_days": 1,
+    "description": "Valide les titres de transport à bord. Un bus équipé n'a plus de fraude : sans valideur, 10 % des recettes du bus sont perdues."
+  }
+]
